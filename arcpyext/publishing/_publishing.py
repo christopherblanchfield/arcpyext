@@ -70,6 +70,42 @@ def convert_pro_map_to_service_draft(path_proj_or_map,
     return sd_draft_path
 
 
+def convert_pro_map_to_vector_tile_draft(path_proj_or_map,
+                                         sd_draft_path,
+                                         service_name,
+                                         folder_name=None,
+                                         summary=None,
+                                         copy_data_to_server=False,
+                                         portal_folder=None):
+    from ..mapping import is_valid
+
+    if isinstance(path_proj_or_map, arcpy.mp.ArcGISProject):
+        # assume we want to publish the first map
+        map_obj = path_proj_or_map.listMaps()[0]
+    elif isinstance(path_proj_or_map, arcpy._mp.Map):
+        # got a map, all good to go
+        # have to grab the class from the internal module
+        map_obj = path_proj_or_map
+    else:
+        # assume it's a path
+        map_obj = arcpy.mp.ArcGISProject(path_proj_or_map).listMaps()[0]
+
+    if len(map_obj.listBrokenDataSources()) > 0:
+        raise MapDataSourcesBrokenError("One or more layers or tables have broken data sources.")
+
+    if os.path.exists(sd_draft_path):
+        os.remove(sd_draft_path)
+
+    draft = map_obj.getWebLayerSharingDraft('HOSTING_SERVER', 'TILE', service_name)
+
+    draft.offline = True
+    draft.serverFolder = folder_name
+    draft.portalFolder = portal_folder
+    draft.exportToSDDraft(sd_draft_path)
+
+    return sd_draft_path
+
+
 def convert_desktop_map_to_service_draft(map_doc,
                                          sd_draft_path,
                                          service_name,
